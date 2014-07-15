@@ -1,4 +1,9 @@
-﻿Function CreateCimSessionOption
+﻿# http://techcenter.wikifoundry.com/page/DCIM.Library.MOF4
+# http://en.community.dell.com/techcenter/systems-management/w/wiki/4374.how-to-build-and-execute-wsman-method-commands.aspx
+# http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2.41.0/
+###  http://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=0CDQQFjAA&url=http%3A%2F%2Fen.community.dell.com%2Fcfs-file.ashx%2F__key%2Ftelligent-evolution-components-attachments%2F13-4491-00-00-20-40-00-06%2FDell_5F00_ChassisSystemInfoProfile_2D00_1.0.pdf&ei=_kKzU-uVGpKHyAS9hIG4DA&usg=AFQjCNH4LgCBpleQcD3O3vBm6k26DHg9nw&sig2=q99c4YDrWEMnHk9eREI6aw&bvm=bv.70138588,d.aWw
+
+Function CreateCimSessionOption
 {
     Return New-CimSessionOption -SkipCACheck -SkipCNCheck -SkipRevocationCheck -Encoding Utf8 -UseSsl
 }
@@ -50,6 +55,24 @@ Function Get-SystemView
         [Parameter(Mandatory=$TRUE)][PSCredential]$credential
     )
     Return GetView -ipAddress $ipAddress -credential $credential -uri 'http://schemas.dell.com/wbem/wscim/1/cim-schema/2/DCIM_SystemView'
+}
+
+Function Get-BladeView
+{
+    Param(
+        [Parameter(Mandatory=$TRUE)][string]$ipAddress,
+        [Parameter(Mandatory=$TRUE)][PSCredential]$credential
+    )
+    Return GetView -ipAddress $ipAddress -credential $credential -uri 'http://schemas.dell.com/wbem/wscim/1/cim-schema/2/DCIM_BladeServerView'
+}
+
+Function Get-ChassisView
+{
+    Param(
+        [Parameter(Mandatory=$TRUE)][string]$ipAddress,
+        [Parameter(Mandatory=$TRUE)][PSCredential]$credential
+    )
+    Return GetView -ipAddress $ipAddress -credential $credential -uri 'http://schemas.dell.com/wbem/wscim/1/cim-schema/2/DCIM_ModularChassisView'
 }
 
 Function Get-CPUView
@@ -236,4 +259,5 @@ Export-ModuleMember -Function Get-iDRACView
 Export-ModuleMember -Function Get-MemoryView
 Export-ModuleMember -Function Get-NICView
 Export-ModuleMember -Function Get-SystemView
-
+Export-ModuleMember -Function Get-BladeView
+Export-ModuleMember -Function Get-ChassisView
