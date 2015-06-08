@@ -1,10 +1,12 @@
 ﻿<#  
 
-    Helpful resources 
-    http://techcenter.wikifoundry.com/page/DCIM.Library.MOF4
+    Helpful resources
+    
+    Documentation of Dell dcim libraries: http://en.community.dell.com/techcenter/systems-management/w/wiki/1906.dcim-library-profile
     http://en.community.dell.com/techcenter/systems-management/w/wiki/4374.how-to-build-and-execute-wsman-method-commands.aspx
     http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2.41.0/
     http://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=0CDQQFjAA&url=http%3A%2F%2Fen.community.dell.com%2Fcfs-file.ashx%2F__key%2Ftelligent-evolution-components-attachments%2F13-4491-00-00-20-40-00-06%2FDell_5F00_ChassisSystemInfoProfile_2D00_1.0.pdf&ei=_kKzU-uVGpKHyAS9hIG4DA&usg=AFQjCNH4LgCBpleQcD3O3vBm6k26DHg9nw&sig2=q99c4YDrWEMnHk9eREI6aw&bvm=bv.70138588,d.aWw
+    Search "Fibre Channel Host Bus Adapters for Dell PowerEdge Servers"
 #>
 
 Function CreateCimSessionOption
@@ -68,6 +70,43 @@ Function Get-BladeView
         [Parameter(Mandatory=$TRUE)][PSCredential]$credential
     )
     Return GetView -ipAddress $ipAddress -credential $credential -uri 'http://schemas.dell.com/wbem/wscim/1/cim-schema/2/DCIM_BladeServerView'
+}
+
+Function Get-FCStatistics
+{
+    Param(
+        [Parameter(Mandatory=$TRUE)][string]$ipAddress,
+        [Parameter(Mandatory=$TRUE)][PSCredential]$credential
+    )
+    #Get-CimInstance -CimSession $session -ResourceUri http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/root/dcim/DCIM_FCStatistics
+    Return GetView -ipAddress $ipAddress -credential $credential -uri 'http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/root/dcim/DCIM_FCStatistics'
+}
+
+Function Get-FCCapabilities
+{
+    Param(
+        [Parameter(Mandatory=$TRUE)][string]$ipAddress,
+        [Parameter(Mandatory=$TRUE)][PSCredential]$credential
+    )
+    Return GetView -ipAddress $ipAddress -credential $credential -uri 'http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/root/dcim/DCIM_FCCababilities'
+}
+
+Function Get-FCView
+{
+    Param(
+        [Parameter(Mandatory=$TRUE)][string]$ipAddress,
+        [Parameter(Mandatory=$TRUE)][PSCredential]$credential
+    )
+    Return GetView -ipAddress $ipAddress -credential $credential -uri 'http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/root/dcim/DCIM_FCView'
+}
+
+Function Get-FCEnumeration
+{
+    Param(
+        [Parameter(Mandatory=$TRUE)][string]$ipAddress,
+        [Parameter(Mandatory=$TRUE)][PSCredential]$credential
+    )
+    Return GetView -ipAddress $ipAddress -credential $credential -uri 'http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/root/dcim/DCIM_FCEnumeration'
 }
 
 Function Get-ChassisView
