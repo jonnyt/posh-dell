@@ -215,7 +215,7 @@ function Get-DellWarranty
  
     Begin
     {
-        $uri =  'http://143.166.84.118/services/AssetService.asmx?WSDL'
+        $uri =  'http://xserv.dell.com/services/AssetService.asmx?WSDL'
         $service = New-WebServiceProxy -Uri $uri
     } 
     Process{ 
