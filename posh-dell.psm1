@@ -348,6 +348,15 @@ Function Get-SystemView
     Return GetView -ipAddress $ipAddress -credential $credential -uri 'http://schemas.dell.com/wbem/wscim/1/cim-schema/2/DCIM_SystemView'
 }
 
+Function Get-BiosEnum
+{
+    Param(
+        [Parameter(Mandatory=$TRUE)][string]$ipAddress,
+        [Parameter(Mandatory=$TRUE)][PSCredential]$credential
+    )
+    Return GetView -ipAddress $ipAddress -credential $credential -uri 'http://schemas.dell.com/wbem/wscim/1/cim-schema/2/DCIM_BIOSEnumeration'
+}
+
 Function Get-BladeView
 {
     Param(
