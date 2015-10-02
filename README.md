@@ -8,6 +8,6 @@ Requirements:
 - None
 
 Usage:
-Import-Module dell.psm1
+Import-Module posh-dell
 
 Notes:
