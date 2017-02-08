@@ -1,5 +1,4 @@
 ﻿<#  
-
     Helpful resources
     
     Documentation of Dell dcim libraries: http://en.community.dell.com/techcenter/systems-management/w/wiki/1906.dcim-library-profile
@@ -35,33 +34,28 @@ Add-Type -TypeDefinition @"
 "@
 
 
-Function CreateCimSessionOption
-{
+Function CreateCimSessionOption {
     Return New-CimSessionOption -SkipCACheck -SkipCNCheck -SkipRevocationCheck -Encoding Utf8 -UseSsl
 }
 
-Function New-iDracSession
-{
+Function New-iDracSession {
     Param(
         [Parameter(Mandatory=$TRUE)][string]$ipAddress,
         [Parameter(Mandatory=$TRUE)][PSCredential]$credential
     )
     $DebugPreference='Continue'
     $ErrorActionPreference = 'Stop'   
-    Try
-    {
+    Try {
         $Cimop = CreateCimSessionOption
         Return New-CimSession -Authentication Basic -Credential $credential -ComputerName $ipAddress -Port 443 -SessionOption $Cimop
     }
-    Catch
-    {
+    Catch {
         Throw
     }
 
 }
 
-Function GetView
-{
+Function GetView {
     Param(
         [Parameter(Mandatory=$TRUE)][string]$ipAddress,
         [Parameter(Mandatory=$TRUE)][PSCredential]$credential,
@@ -69,19 +63,16 @@ Function GetView
     )
     $DebugPreference='Continue'
     $ErrorActionPreference = 'Stop'
-    Try
-    {
+    Try {
         $session = New-iDracSession -ipAddress $ipAddress -credential $credential
         return Get-CimInstance -CimSession $session -ResourceUri $uri
     }
-    Catch
-    {
+    Catch {
         Throw
     }
 }
 
-Function Export-SystemConfigurationProfile
-{
+Function Export-SystemConfigurationProfile {
     Param(
         [Parameter(Mandatory=$True)][string]$ComputerName,
         [Parameter(Mandatory=$True)][PSCredential]$DracCredential,
@@ -110,38 +101,35 @@ Function Export-SystemConfigurationProfile
     $parameters.Add('FileName',$FileName)
     $parameters.Add('Target',$Target)
     
-    if($ExportMode -ne [ExportMode]::Normal)
-    {
-        Switch ($ExportMode)
-        {
-            'Clone' {$parameters.Add('ExportUse',1)}
-            'Replace' {$parameters.Add('ExportUse',2)}
+    if($ExportMode -ne [ExportMode]::Normal) {
+        Switch ($ExportMode) {
+            'Clone' {
+                $parameters.Add('ExportUse',1)
+            }
+            'Replace' {
+                $parameters.Add('ExportUse',2)
+            }
         }
     }
 
     $job = Invoke-CimMethod -MethodName ExportSystemConfiguration -InputObject $instance -CimSession $session -Arguments $parameters
-    if($job.ReturnValue -eq 4096)
-    {
-        if($Passthrough)
-        {
+    if($job.ReturnValue -eq 4096) {
+        if($Passthrough) {
             $job
         }
-        else
-        {
+        else {
             $job = Wait-SystemConfigurationJob -Session $session -JobID $job.Job.EndpointReference.InstanceID -Activity "Exporting System Configuration for $($session.ComputerName)"
         }
     }
-    else
-    {
+    else {
         Throw "Job creation failed with error: $($job.Message)"
     }
     $job
 
 }
 
-Function Import-SystemConfigurationProfile
-{
- Param(
+Function Import-SystemConfigurationProfile {
+    Param(
         [Parameter(Mandatory=$True)][string[]]$ComputerName,
         [Parameter(Mandatory=$True)][PSCredential]$DracCredential,
         [Parameter(Mandatory=$True)][PSCredential]$ShareCredential,
@@ -158,8 +146,7 @@ Function Import-SystemConfigurationProfile
 
     #$uri = 'http://schemas.dmtf.org/wbem/wscim/1/cimschema/2/root/dcim/DCIM_LCService?SystemCreationClassName=DCIM_ComputerSystem+CreationClassName=DCIM_LCService+SystemName=DCIM:ComputerSystem+Name=DCIM:LCService'
 
-    Begin
-    {
+    Begin {
         $properties= @{SystemCreationClassName="DCIM_ComputerSystem";SystemName="DCIM:ComputerSystem";CreationClassName="DCIM_LCService";Name="DCIM:LCService";}
         $instance = New-CimInstance -ClassName DCIM_LCService -Namespace root/dcim -ClientOnly -Key @($properties.keys) -Property $properties
     
@@ -171,54 +158,50 @@ Function Import-SystemConfigurationProfile
         $parameters.Add('ShareType',2)
         $parameters.Add('FileName',$FileName)
     
-        if(!$WhatIf)
-        {
-            Switch($EndPowerState)
-            {
-                'PoweredOff' {$parameters.Add('EndHostPowerState',0)}
-                'PoweredOn' {$parameters.Add('EndHostPowerState',1)}
+        if(!$WhatIf) {
+            Switch($EndPowerState) {
+                'PoweredOff' {
+                    $parameters.Add('EndHostPowerState',0)
+                }
+                'PoweredOn' {
+                    $parameters.Add('EndHostPowerState',1)
+                }
             }
 
-            Switch($ShutdownType)
-            {
-                'Graceful' {$parameters.Add('ShutdownType',0)}
-                'Forced' {$parameters.Add('ShutdownType',1)}
+            Switch($ShutdownType) {
+                'Graceful' {
+                    $parameters.Add('ShutdownType',0)
+                }
+                'Forced' {
+                    $parameters.Add('ShutdownType',1)
+                }
             }
         }
 
     }
     
-    Process
-    {
-        foreach($computer in $ComputerName)
-        {
+    Process {
+        foreach($computer in $ComputerName) {
             $session = New-iDracSession -ipAddress $computer -credential $DracCredential
 
-            if($WhatIf)
-            {
+            if($WhatIf) {
                 $job = Invoke-CimMethod -MethodName ImportSystemConfigurationPreview -InputObject $instance -CimSession $session -Arguments $parameters
             }
-            else
-            {
-                if(!$Confirm)
-                {
+            else {
+                if(!$Confirm) {
                     $job = Invoke-CimMethod -MethodName ImportSystemConfiguration -InputObject $instance -CimSession $session -Arguments $parameters
                 }
             }
             
-            if($job.ReturnValue -eq 4096)
-            {
-                if($Passthrough)
-                {
+            if($job.ReturnValue -eq 4096) {
+                if($Passthrough) {
                     $job
                 }
-                else
-                {
+                else {
                     $job = Wait-SystemConfigurationJob -Session $session -JobID $job.Job.EndpointReference.InstanceID -Activity "Exporting System Configuration for $($session.ComputerName)"
                 }
             }
-            else
-            {
+            else {
                 Throw "Job creation failed with error: $($job.Message)"
             }
             $job
@@ -226,8 +209,7 @@ Function Import-SystemConfigurationProfile
     }
 }
 
-Function Wait-SystemConfigurationJob
-{
+Function Wait-SystemConfigurationJob {
     Param (
         [Parameter(Mandatory,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true,ValueFromRemainingArguments=$false)]$Session,
         [Parameter (Mandatory)]$JobID,
@@ -236,31 +218,24 @@ Function Wait-SystemConfigurationJob
     
     $jobstatus = Get-CimInstance -CimSession $Session -ResourceUri "http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/DCIM_LifecycleJob" -Namespace "root/dcim" -Query "SELECT InstanceID,JobStatus,Message,PercentComplete FROM DCIM_LifecycleJob Where InstanceID='$JobID'"
         
-    if ($jobstatus.PercentComplete -eq 'NA') 
-    {
+    if ($jobstatus.PercentComplete -eq 'NA') {
         $PercentComplete = 0
     }
-    else
-    {
+    else {
         $PercentComplete = $JobStatus.PercentComplete
     }
     
-    while (($jobstatus.JobStatus -like 'Running' -or $jobstatus.JobStatus -like '*Progress*' -or $jobstatus.JobStatus -like '*ready*' -or $jobstatus.JobStatus -like '*pending*'))
-    {
+    while (($jobstatus.JobStatus -like 'Running' -or $jobstatus.JobStatus -like '*Progress*' -or $jobstatus.JobStatus -like '*ready*' -or $jobstatus.JobStatus -like '*pending*')) {
         $jobstatus = Get-CimInstance -CimSession $Session -ResourceUri "http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/DCIM_LifecycleJob" -Namespace "root/dcim" -Query "SELECT InstanceID,JobStatus,Message,PercentComplete FROM DCIM_LifecycleJob Where InstanceID='$JobID'"
-        if ($jobstatus.JobStatus -notlike '*Failed*')
-        {
-            if ($jobstatus.PercentComplete -eq 'NA')
-            {
+        if ($jobstatus.JobStatus -notlike '*Failed*') {
+            if ($jobstatus.PercentComplete -eq 'NA') {
                 $PercentComplete = 0
             }
-            else
-            {
+            else {
                 $PercentComplete = $JobStatus.PercentComplete
             }
         } 
-        else
-        {
+        else {
             Throw "Job creation failed with an error: $($jobstatus.Message). Use 'Get-PEConfigurationResult -JobID $($jobstatus.Job.EndpointReference.InstanceID)' to receive detailed configuration result"
         }
         
@@ -270,8 +245,7 @@ Function Wait-SystemConfigurationJob
     $jobstatus
 }
 
-Function Get-SystemConfigurationJob
-{
+Function Get-SystemConfigurationJob {
     Param (
         [Parameter(Mandatory,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true,ValueFromRemainingArguments=$false)]$Session,
         [Parameter (Mandatory)]$JobID
@@ -281,8 +255,7 @@ Function Get-SystemConfigurationJob
     $job
 }
 
-Function Get-SystemConfigurationResult 
-{
+Function Get-SystemConfigurationResult {
     [CmdletBinding()]
     [OutputType([PSObject])]
     Param (
@@ -290,24 +263,20 @@ Function Get-SystemConfigurationResult
         [Parameter(Mandatory)]$JobID
     )
 
-    Begin 
-    {
+    Begin {
         $properties=@{InstanceID="DCIM:LifeCycleLog";}
         $instance = New-CimInstance -ClassName DCIM_LCRecordLog -Namespace root/dcim -ClientOnly -Key @($properties.keys) -Property $properties
         $Parameters = @{JobID = $JobID}
     }
 
-    Process
-    {
+    Process {
         $Result = Invoke-CimMethod -InputObject $instance -MethodName GetConfigResults -CimSession $Session -Arguments $Parameters
-        if ($Result.ReturnValue -eq 0) 
-        {
+        if ($Result.ReturnValue -eq 0) {
             $Xml = $Result.COnfigResults
             $XmlDoc = New-Object System.Xml.XmlDocument
             $ConfigResults = $XmlDoc.CreateElement('Configuration')
             $ConfigResults.InnerXml = $Xml
-            Foreach ($ConfigResult in $ConfigResults.ConfigResults) 
-            {
+            Foreach ($ConfigResult in $ConfigResults.ConfigResults) {
                 $ResultHash = [Ordered]@{
                     JobName = $ConfigResult.JobName
                     JobID = $ConfigResult.JobID
@@ -315,8 +284,7 @@ Function Get-SystemConfigurationResult
                     FQDD = $ConfigResult.FQDD
                 }
                 $OperationArray = @()
-                Foreach ($Operation in $ConfigResult.Operation)
-{
+                Foreach ($Operation in $ConfigResult.Operation) {
                     $OperationHash = [Ordered]@{
                         Name = $Operation.Name -join ' - '
                         DisplayValue = $Operation.DisplayValue
@@ -332,15 +300,13 @@ Function Get-SystemConfigurationResult
                 New-Object -TypeName PSObject -Property $ResultHash
             }
         } 
-        else
-        {
+        else {
             Write-Error $Result.Message
         }
     }
 }
 
-Function Get-SystemView
-{
+Function Get-SystemView {
     Param(
         [Parameter(Mandatory=$TRUE)][string]$ipAddress,
         [Parameter(Mandatory=$TRUE)][PSCredential]$credential
@@ -348,8 +314,7 @@ Function Get-SystemView
     Return GetView -ipAddress $ipAddress -credential $credential -uri 'http://schemas.dell.com/wbem/wscim/1/cim-schema/2/DCIM_SystemView'
 }
 
-Function Get-BiosEnum
-{
+Function Get-BiosEnum {
     Param(
         [Parameter(Mandatory=$TRUE)][string]$ipAddress,
         [Parameter(Mandatory=$TRUE)][PSCredential]$credential
@@ -357,8 +322,7 @@ Function Get-BiosEnum
     Return GetView -ipAddress $ipAddress -credential $credential -uri 'http://schemas.dell.com/wbem/wscim/1/cim-schema/2/DCIM_BIOSEnumeration'
 }
 
-Function Get-BladeView
-{
+Function Get-BladeView {
     Param(
         [Parameter(Mandatory=$TRUE)][string]$ipAddress,
         [Parameter(Mandatory=$TRUE)][PSCredential]$credential
@@ -366,8 +330,7 @@ Function Get-BladeView
     Return GetView -ipAddress $ipAddress -credential $credential -uri 'http://schemas.dell.com/wbem/wscim/1/cim-schema/2/DCIM_BladeServerView'
 }
 
-Function Get-FCStatistics
-{
+Function Get-FCStatistics {
     Param(
         [Parameter(Mandatory=$TRUE)][string]$ipAddress,
         [Parameter(Mandatory=$TRUE)][PSCredential]$credential
@@ -375,8 +338,7 @@ Function Get-FCStatistics
     Return GetView -ipAddress $ipAddress -credential $credential -uri 'http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/root/dcim/DCIM_FCStatistics'
 }
 
-Function Get-FCCapabilities
-{
+Function Get-FCCapabilities {
     Param(
         [Parameter(Mandatory=$TRUE)][string]$ipAddress,
         [Parameter(Mandatory=$TRUE)][PSCredential]$credential
@@ -384,8 +346,7 @@ Function Get-FCCapabilities
     Return GetView -ipAddress $ipAddress -credential $credential -uri 'http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/root/dcim/DCIM_FCCababilities'
 }
 
-Function Get-FCView
-{
+Function Get-FCView {
     Param(
         [Parameter(Mandatory=$TRUE)][string]$ipAddress,
         [Parameter(Mandatory=$TRUE)][PSCredential]$credential
@@ -393,8 +354,7 @@ Function Get-FCView
     Return GetView -ipAddress $ipAddress -credential $credential -uri 'http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/root/dcim/DCIM_FCView'
 }
 
-Function Get-FCEnumeration
-{
+Function Get-FCEnumeration {
     Param(
         [Parameter(Mandatory=$TRUE)][string]$ipAddress,
         [Parameter(Mandatory=$TRUE)][PSCredential]$credential
@@ -402,8 +362,7 @@ Function Get-FCEnumeration
     Return GetView -ipAddress $ipAddress -credential $credential -uri 'http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/root/dcim/DCIM_FCEnumeration'
 }
 
-Function Get-ChassisView
-{
+Function Get-ChassisView {
     Param(
         [Parameter(Mandatory=$TRUE)][string]$ipAddress,
         [Parameter(Mandatory=$TRUE)][PSCredential]$credential
@@ -411,8 +370,7 @@ Function Get-ChassisView
     Return GetView -ipAddress $ipAddress -credential $credential -uri 'http://schemas.dell.com/wbem/wscim/1/cim-schema/2/DCIM_ModularChassisView'
 }
 
-Function Get-CPUView
-{
+Function Get-CPUView {
     Param(
         [Parameter(Mandatory=$TRUE)][string]$ipAddress,
         [Parameter(Mandatory=$TRUE)][PSCredential]$credential
@@ -420,8 +378,7 @@ Function Get-CPUView
     Return GetView -ipAddress $ipAddress -credential $credential -uri 'http://schemas.dell.com/wbem/wscim/1/cim-schema/2/DCIM_CPUView'
 }
 
-Function Get-MemoryView
-{
+Function Get-MemoryView {
     Param(
         [Parameter(Mandatory=$TRUE)][string]$ipAddress,
         [Parameter(Mandatory=$TRUE)][PSCredential]$credential
@@ -429,8 +386,7 @@ Function Get-MemoryView
     Return GetView -ipAddress $ipAddress -credential $credential -uri 'http://schemas.dell.com/wbem/wscim/1/cim-schema/2/DCIM_MemoryView'
 }
 
-Function Get-NICView
-{
+Function Get-NICView {
     Param(
         [Parameter(Mandatory=$TRUE)][string]$ipAddress,
         [Parameter(Mandatory=$TRUE)][PSCredential]$credential
@@ -438,8 +394,7 @@ Function Get-NICView
     Return GetView -ipAddress $ipAddress -credential $credential -uri 'http://schemas.dell.com/wbem/wscim/1/cim-schema/2/DCIM_NICView'
 }
 
-Function Get-iDRACView
-{
+Function Get-iDRACView {
     Param(
         [Parameter(Mandatory=$TRUE)][string]$ipAddress,
         [Parameter(Mandatory=$TRUE)][PSCredential]$credential
@@ -447,148 +402,5 @@ Function Get-iDRACView
     Return GetView -ipAddress $ipAddress -credential $credential -uri 'http://schemas.dell.com/wbem/wscim/1/cim-schema/2/DCIM_iDRACCARDView'
 }
 
-<# 
-.Synopsis 
-   Get Warranty Info for Dell Computer 
-.DESCRIPTION 
-   This takes a Computer Name, returns the ST of the computer, 
-   connects to Dell's SOAP Service and returns warranty info and 
-   related information. If computer is offline, no action performed. 
-   ST is pulled via WMI. 
-.EXAMPLE 
-   get-dellwarranty -Name bob, client1, client2 | ft -AutoSize 
-    WARNING: bob is offline 
- 
-    ComputerName ServiceLevel  EndDate   StartDate DaysLeft ServiceTag Type                       Model ShipDate  
-    ------------ ------------  -------   --------- -------- ---------- ----                       ----- --------  
-    client1      C, NBD ONSITE 2/22/2017 2/23/2014     1095 7GH6SX1    Dell Precision WorkStation T1650 2/22/2013 
-    client2      C, NBD ONSITE 7/16/2014 7/16/2011      334 74N5LV1    Dell Precision WorkStation T3500 7/15/2010 
-.EXAMPLE 
-    Get-ADComputer -Filter * -SearchBase "OU=Exchange 2010,OU=Member Servers,DC=Contoso,DC=com" | get-dellwarranty | ft -AutoSize 
- 
-    ComputerName ServiceLevel            EndDate   StartDate DaysLeft ServiceTag Type      Model ShipDate  
-    ------------ ------------            -------   --------- -------- ---------- ----      ----- --------  
-    MAIL02       P, Gold or ProMCritical 4/26/2016 4/25/2011      984 CGWRNQ1    PowerEdge M905  4/25/2011 
-    MAIL01       P, Gold or ProMCritical 4/26/2016 4/25/2011      984 DGWRNQ1    PowerEdge M905  4/25/2011 
-    DAG          P, Gold or ProMCritical 4/26/2016 4/25/2011      984 CGWRNQ1    PowerEdge M905  4/25/2011 
-    MAIL         P, Gold or ProMCritical 4/26/2016 4/25/2011      984 CGWRNQ1    PowerEdge M905  4/25/2011 
-.EXAMPLE 
-    get-dellwarranty -ServiceTag CGABCQ1,DGEFGQ1 | ft  -AutoSize 
- 
-    ServiceLevel            EndDate   StartDate DaysLeft ServiceTag Type      Model ShipDate  
-    ------------            -------   --------- -------- ---------- ----      ----- --------  
-    P, Gold or ProMCritical 4/26/2016 4/25/2011      984 CGABCQ1    PowerEdge M905  4/25/2011 
-    P, Gold or ProMCritical 4/26/2016 4/25/2011      984 DGEFGQ1    PowerEdge M905  4/25/201 
-.INPUTS 
-   Name(ComputerName), ServiceTag 
-.OUTPUTS 
-   System.Object 
-.NOTES 
-   General notes 
-#> 
-function Get-DellWarranty
-{ 
-    [CmdletBinding()] 
-    [OutputType([System.Object])] 
-    Param( 
-        # Name should be a valid computer name or IP address. 
-        [Parameter(Mandatory=$False,  
-                   ValueFromPipeline=$true, 
-                   ValueFromPipelineByPropertyName=$true,  
-                   ValueFromRemainingArguments=$false)] 
-         
-        [Alias('HostName', 'Identity', 'DNSHostName', 'ComputerName')] 
-        [string[]]$Name, 
-         
-         # ServiceTag should be a valid Dell Service tag. Enter one or more values. 
-         [Parameter(Mandatory=$false,  
-                    ValueFromPipeline=$false)] 
-         [string[]]$ServiceTag 
-         ) 
- 
-    Begin
-    {
-        $uri =  'http://xserv.dell.com/services/AssetService.asmx?WSDL'
-        $service = New-WebServiceProxy -Uri $uri
-    } 
-    Process{ 
-        if($ServiceTag -eq $Null){ 
-            foreach($C in $Name){ 
-                $test = Test-Connection -ComputerName $c -Count 1 -Quiet 
-                    if($test -eq $true){ 
-                       # $service = New-WebServiceProxy -Uri $uri 
-                        if($args.count -ne 0){ 
-                            $serial = $args[0] 
-                            } 
-                        else{ 
-                        $system = Get-WmiObject -ComputerName $C win32_bios -ErrorAction SilentlyContinue 
-                        $serial =  $system.serialnumber 
-                        } 
-                        $guid = [guid]::NewGuid() 
-                        $info = $service.GetAssetInformation($guid,'check_warranty.ps1',$serial) 
-                         
-                        $Result=[ordered]@{ 
-                        'ComputerName'=$c 
-                        'ServiceLevel'=$info[0].Entitlements[0].ServiceLevelDescription.ToString() 
-                        'EndDate'=$info[0].Entitlements[0].EndDate.ToShortDateString() 
-                        'StartDate'=$info[0].Entitlements[0].StartDate.ToShortDateString() 
-                        'DaysLeft'=$info[0].Entitlements[0].DaysLeft 
-                        'ServiceTag'=$info[0].AssetHeaderData.ServiceTag 
-                        'Type'=$info[0].AssetHeaderData.SystemType 
-                        'Model'=$info[0].AssetHeaderData.SystemModel 
-                        'ShipDate'=$info[0].AssetHeaderData.SystemShipDate.ToShortDateString() 
-                        } 
-                     
-                        $obj = New-Object -TypeName psobject -Property $result 
-                        $obj
-                    }  
-                    else{ 
-                        Write-Warning "$c is offline" 
-                        clv c 
-                        }         
- 
-                } 
-        } 
-        elseif($ServiceTag -ne $Null)
-        { 
-            foreach($s in $ServiceTag)
-            { 
-                  # $service = New-WebServiceProxy -Uri $uri
-                        if($args.count -ne 0){ 
-                            $serial = $args[0] 
-                            } 
-                        $guid = [guid]::NewGuid() 
-                        $info = $service.GetAssetInformation($guid,'check_warranty.ps1',$S) 
-                         
-                        if($info -like "*"){ 
-                         
-                            $Result=[ordered]@{ 
-                            'ServiceLevel'=$info[0].Entitlements[0].ServiceLevelDescription.ToString() 
-                            'EndDate'=$info[0].Entitlements[0].EndDate.ToShortDateString() 
-                            'StartDate'=$info[0].Entitlements[0].StartDate.ToShortDateString() 
-                            'DaysLeft'=$info[0].Entitlements[0].DaysLeft 
-                            'ServiceTag'=$info[0].AssetHeaderData.ServiceTag 
-                            'Type'=$info[0].AssetHeaderData.SystemType 
-                            'Model'=$info[0].AssetHeaderData.SystemModel 
-                            'ShipDate'=$info[0].AssetHeaderData.SystemShipDate.ToShortDateString() 
-                            } 
-                        } 
-                        else
-                        { 
-                            Write-Warning "$S is not a valid Dell Service Tag." 
-                            Return $Null
-                        } 
-                     
-                        $obj = New-Object -TypeName psobject -Property $result 
-                        $obj
-                   } 
-            } 
-    } 
-    End 
-    { 
-    } 
-}
-
 Set-Alias CreateCimSession New-iDracSession
-
 Export-ModuleMember -Function *
